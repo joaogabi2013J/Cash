@@ -338,8 +338,14 @@ async def get_transactions(current_user: User = Depends(get_current_user)):
         ]
     }).sort("timestamp", -1).limit(50).to_list(length=50)
     
-    # Get user names for transactions
+    # Convert ObjectIds to strings and get user names
+    result = []
     for transaction in transactions:
+        # Convert ObjectId to string
+        if "_id" in transaction:
+            del transaction["_id"]
+        
+        # Get user names for transactions
         if transaction["from_user"] == "system":
             transaction["from_name"] = "Sistema"
         else:
@@ -348,8 +354,14 @@ async def get_transactions(current_user: User = Depends(get_current_user)):
         
         to_user = await db.users.find_one({"id": transaction["to_user"]})
         transaction["to_name"] = to_user["name"] if to_user else "Usuário"
+        
+        # Convert timestamp to string if it's a datetime object
+        if isinstance(transaction["timestamp"], datetime):
+            transaction["timestamp"] = transaction["timestamp"].isoformat()
+        
+        result.append(transaction)
     
-    return transactions
+    return result
 
 @app.get("/api/users/search")
 async def search_users(q: str, current_user: User = Depends(get_current_user)):
